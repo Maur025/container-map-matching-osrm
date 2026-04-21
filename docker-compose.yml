@@ -1,32 +1,11 @@
 services:
-  # osrm-extract:
-  #   container_name: osrm-extract
-  #   image: osrm/osrm-backend
-  #   command: osrm-extract -p /options/bolivia.lua /data/bolivia-latest.osm.pbf
-  #   volumes:
-  #     - ./data:/data
-  #     - ./options:/options
-  #   networks:
-  #     - compose-net
-  
-  # osrm-contract:
-  #   container_name: osrm-contract
-  #   image: osrm/osrm-backend
-  #   command: osrm-contract /data/bolivia-latest.osrm
-  #   volumes:
-  #     - ./data:/data
-  #   networks:
-  #     - compose-net
-  #   depends_on:
-  #     - osrm-extract
-
   osrm-setup:
     # profiles:
     #   - setup
     container_name: osrm-setup
-    image: osrm/osrm-backend
+    image: osrm/osrm-backend:v5.27.1
     hostname: osrm-setup
-    command: sh -c "osrm-extract -p /options/bolivia.lua /data/bolivia-latest.osm.pbf && osrm-contract /data/bolivia-latest.osrm"
+    command: sh -c "osrm-extract -p /options/bolivia.lua /data/geo-data-latest.osm.pbf && osrm-contract /data/geo-data-latest.osrm"
     volumes:
       - ./data:/data
       - ./options:/options
@@ -35,9 +14,9 @@ services:
 
   map-osrm-server:
     container_name: map-osrm-server
-    image: osrm/osrm-backend
+    image: osrm/osrm-backend:v5.27.1
     hostname: map-osrm-server
-    command: osrm-routed --algorithm ch /data/bolivia-latest.osrm
+    command: osrm-routed --algorithm ch /data/geo-data-latest.osrm
     ports:
       - "4300:5000"
     volumes:

@@ -2,11 +2,12 @@
 
 Environment to up software of OSRM to fetch data to routes, matches or anything reference to geolocation, which includes calculations.
 
-> **NOTA** el contenedor docker solo funciona en el sistema operativo Linux en el momento que escribo esto.
+> **NOTE**
+> this container only works in Linux systems, at the time I'm writing this.
 
 The following steps are Spanish for your easy understanding, add steps in English soon.
 
-## Setup server OSRM
+## Setup server OSRM (Es)
 
 1. Descarga el archivo de datos de tu interés podría ser de tu país o región, es necesario un archivo pbf para continuar con los siguientes pasos.
 
@@ -18,76 +19,129 @@ The following steps are Spanish for your easy understanding, add steps in Englis
 
     Sirve para descargar los datos de geolocalización de Bolivia.
 
-2. Crea la carpeta `data` en el directorio donde tienes el archivo docker-compose.yml
+2. Renombra el archivo a `geo-data-latest.osm.pbf`
+
+3. Crea la carpeta `data` en el directorio donde tienes el archivo docker-compose.yml
 
     ```TEXT
     └── carpeta-contenedora-osrm
         ├── /data   #carpeta a crear
+        ├── /options
+        │   └── bolivia.lua
         └── docker-compose.yml
     ```
 
-3. Copia el archivo descargado con los datos del mapa, en la carpeta que creaste con el nombre `data`.
+4. Copia el archivo descargado y renombrado `geo-data-latest.osm.pbf`, en la carpeta que creaste con el nombre `data`.
 
     ```TEXT
     └── carpeta-contenedora-osrm
         ├── /data
-        │   └── copia-aqui-tu-archivo.pbf
+        │   └── geo-data-latest.osm.pbf
+        ├── /options
+        │   └── bolivia.lua
         └── docker-compose.yml
     ```
 
-4. Abre `docker-compose.yml` y revisa el contenido, si los servicios `osrm-extract` o `osrm-contract` esta comentados, quita temporalmente los `#` para usarlos. Podrías encontrarlo de esta forma.
+5. Abre `docker-compose.yml` y revisa el contenido, si el servicio `osrm-setup` esta comentado, quita temporalmente los `#` para usarlo. Podrías encontrarlo de esta forma.
 
     ```YML
-    # osrm-extract:
-      # container_name: osrm-extract
+    # osrm-setup:
+      # container_name: osrm-setup
     ```
 
     Solo remueve los símbolos, guarda y continua con el siguiente paso.
 
-5. Ahora tenemos que ejecutar los contenedores, lo haremos uno a uno en caso de `osrm-extract` y `osrm-contract` para evitar problemas y colisiones.
+6. Notarás que existe una carpeta con el nombre de `options`, aquí puedes cambiar la configuración que usa OSRM para realizar los cálculos, actualmente tiene un archivo con el nombre `bolivia.lua` esta creado en base a `car.lua`, adaptando o simulando el comportamiento en Bolivia, para que los tiempos no sean muy optimistas.
 
-    > **NOTA**
-    > Solo debe ejecutar estos servicios la primera vez que, por que esto se encarga de extraer y transformar los datos para OSRM, es costoso y puede demorar mucho. Luego solo tiene que correr el servicio `map-osrm-server` que usara los datos tratados.
+7. Si tienes tu propia configuración, o si deseas usar la lógica de otro país puedes reemplazar este archivo, pero no olvides hacer referencia a el antes de ejecutar el servicio `osrm-setup` dentro del archivo `docker-compose.yml`
 
-6. Ejecuta el siguiente comando para extraer los datos:
-
-    ```BASH
-    docker compose run osrm-extrac
+    ```YML
+    services:
+        osrm-setup:
+            # El otro código
+            command: sh -c "osrm-extract -p /options/{nombre-de-tu-archivo}.lua /data/geo-data-latest.osm.pbf && osrm-contract /data/geo-data-latest.osrm"
     ```
 
-7. Ejecuta el siguiente comando para que osrm transforme y procese los datos extraídos.
+    > Si quieres usar la configuración por defecto de osrm después de `-p` usa esto `/data/car.lua`, también puedes usar otras configuraciones propias de OSRM, inclusive podrías volver más compleja la inicialización.
 
-    ```BASH
-    docker compose run osrm-contract
-    ```
-
-8. Ahora para correr el servicio principal `map-osrm-server`, necesitamos que este solo en el archivo, puedes eliminar los bloques de código de `osrm-extract` y `osrm-contract`, o puedes comentarlo para que no interfieran con el servidor principal.
+8. Ahora continuando debemos preparar los datos y seguidamente ejecutar el servidor de OSRM, tienes 2 opciones para hacerlo.
 
     > **NOTA**
-    > Revisa que los servicios mencionados antes se encuentren comentados o eliminados antes de continuar, si no lo están el se demorará mucho mas en iniciar el servicio principal, por que en cada ocasión se pre procesaran los datos antes de iniciar, esta acción es innecesaria después de hacerlo la primera vez.
+    > En un escenario ideal, el servicio `osrm-setup` que sirve para preparar los datos solo se debería ejecutar una sola vez. Reduciendo el tiempo de inicialización del servidor OSRM, si lo ejecutas en cada ocasión podría demorar en estar disponible.
 
-9. Antes de iniciar, revisa el archivo `docker-compose.yml` y verifica o ajusta los puertos, o para ajustar cualquier otro parámetro según lo que necesites. Una vez listo ejecuta el siguiente comando para iniciar el servicio principal:
+9. **Opción 1**, puedes ejecutar por separado cada servicio, verificando que sigan con el orden correcto.
+
+    Primero ejecuta el servicio `osrm-setup` para preparar los datos:
+
+    ```BASH
+    docker compose run osrm-setup
+    ```
+
+    Segundo ejecuta el servicio `map-osrm-server` que levanta el servidor para consultar y realizar los cálculos:
 
     ```BASH
     docker compose run map-osrm-server
     ```
 
-    También puedes ejecutar el siguiente comando:
+    Cuando necesites el servidor principal solo deberías ejecutar el segundo comando, teniendo en cuenta que ya tienes los datos.
+
+10. **Opción 2** puedes dejarle el trabajo a es script la primera vez, pero para usarlo después debes hacer unas modificaciones.
+
+    Primero ejecuta este comando que se asegurará de hacer todo lo necesario para levantar el servidor:
+
+    ```BASH
+    docker compose up
+    ```
+
+    Si no quieres ver lo que hace internamente puedes usar `-d` para ocultarlo, además que evitará que bloquee la terminal.
+
+    Luego, cuando lo tengas disponible debes comentar el servicio `osrm-setup` en el archivo `docker-compose.yml` de esta forma:
+
+    ```YML
+    # osrm-setup:
+    #   # profiles:
+    #   #   - setup
+    #   container_name: osrm-setup
+    #   image: osrm/osrm-backend:v5.27.1
+    #   hostname: osrm-setup
+    #   command: sh -c "osrm-extract -p /options/bolivia.lua /data/geo-data-latest.osm.pbf && osrm-contract /data/geo-data-latest.osrm"
+    #   volumes:
+    #     - ./data:/data
+    #     - ./options:/options
+    #   networks:
+    #     - compose-net
+    ```
+
+    También comenta esto en el servicio `map-osrm-server`:
+
+    ```YML
+      map-osrm-server:
+        container_name: map-osrm-server
+        # el otro código
+
+        # depends_on:
+        #     osrm-setup:
+        #       condition: service_completed_successfully
+    ```
+
+    Esto evitará que te de un error de dependencia inexistente:
+
+    Por ultimo cada vez que requieras el servidor solo debes usar:
 
     ```BASH
     docker compose up -d
     ```
 
-10. Con esto ya tienes disponible el servidor de calculos de OSRM, puedes probarlo desde `postman` o por `curl` para asegurarte de que esta funcionando correctamente. Prueba el siguiente comando:
+De esta forma ya deberías tener disponible el servidor de cálculos de OSRM, puedes probarlo desde `postman` o por `curl` para asegurarte de que esta funcionando correctamente. Prueba el siguiente comando:
 
-    ```BASH
-    curl "http://localhost:4300/route/v1/driving/-68.06888809573269,-16.52954149841827;-68.07729724972369,-16.539156720555397?overview=full&geometries=geojson&steps=false"
-    ```
+```BASH
+curl "http://localhost:4300/route/v1/driving/-68.06888809573269,-16.52954149841827;-68.07729724972369,-16.539156720555397?overview=full&geometries=geojson&steps=false"
+```
 
-    El resultado debería ser exitoso, un `200 OK` si tienes problemas revisa los pasos anteriores, si quieres probar otras ubicaciones según el archivo que descargaste, esta es el formato de la url que probaste:
+El resultado debería ser exitoso, un `200 OK` si tienes problemas revisa los pasos anteriores, si quieres probar otras ubicaciones según el archivo que descargaste, esta es el formato de la url que probaste:
 
-    ```TEXT
-    http://{HOST}:{PORT}/route/v1/driving/{LONGITUDE_INITIAL,LATITUDE_INITIAL};{LONGITUDE_END,LATITUDE_END}?geometries=geojson
-    ```
+```TEXT
+http://{HOST}:{PORT}/route/v1/driving/{LONGITUDE_INITIAL,LATITUDE_INITIAL};{LONGITUDE_END,LATITUDE_END}?geometries=geojson
+```
 
-    El query param especifica que tipo de coordenadas le estas enviando en el request, en este caso se esta usando [geojson](https://datatracker.ietf.org/doc/html/rfc7946), donde se maneja el formato `coordinates: [LNG, LAT]`, para el calculo requiere mínimamente 2, deben estar separadas por `;` puedes ver mas sobre el [API de OSRM](https://project-osrm.org/docs/v5.24.0/api/) en la documentación completa.
+El query param especifica que tipo de coordenadas le estas enviando en el request, en este caso se esta usando [geojson](https://datatracker.ietf.org/doc/html/rfc7946), donde se maneja el formato `coordinates: [LNG, LAT]`, para el calculo requiere mínimamente 2, deben estar separadas por `;` puedes ver mas sobre el [API de OSRM](https://project-osrm.org/docs/v5.24.0/api/) en la documentación completa.
