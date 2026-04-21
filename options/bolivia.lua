@@ -32,9 +32,9 @@ function setup()
     default_mode              = mode.driving,
     default_speed             = 10,
     oneway_handling           = true,
-    side_road_multiplier      = 0.8,
+    side_road_multiplier      = 0.5, -- decrease value
     turn_penalty              = 25, -- increase value
-    speed_reduction           = 0.8,
+    speed_reduction           = 0.4, -- decrease value
     turn_bias                 = 1.2, -- increase value
     cardinal_directions       = false,
 
@@ -149,10 +149,10 @@ function setup()
         secondary_link  = 15, -- decrease value
         tertiary        = 15, -- decrease value
         tertiary_link   = 12, -- decrease value
-        unclassified    = 25,
-        residential     = 15, -- decrease value
-        living_street   = 10,
-        service         = 15
+        unclassified    = 15, -- decrease value
+        residential     = 10, -- decrease value
+        living_street   = 7, -- decrease value
+        service         = 10 -- decrease value
       }
     },
 
