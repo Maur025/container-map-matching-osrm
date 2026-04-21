@@ -3,7 +3,7 @@ services:
     # profiles:
     #   - setup
     container_name: osrm-setup
-    image: osrm/osrm-backend:v5.27.1
+    image: osrm/osrm-backend:latest
     hostname: osrm-setup
     command: sh -c "osrm-extract -p /options/bolivia.lua /data/geo-data-latest.osm.pbf && osrm-contract /data/geo-data-latest.osrm"
     volumes:
@@ -14,7 +14,7 @@ services:
 
   map-osrm-server:
     container_name: map-osrm-server
-    image: osrm/osrm-backend:v5.27.1
+    image: osrm/osrm-backend:latest
     hostname: map-osrm-server
     command: osrm-routed --algorithm ch /data/geo-data-latest.osrm
     ports:
